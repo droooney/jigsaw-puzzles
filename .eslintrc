@@ -18,7 +18,8 @@
   ],
   "extends": [
     "eslint:recommended",
-    "plugin:react/recommended"
+    "plugin:react/recommended",
+    "plugin:react-hooks/recommended"
   ],
   "settings": {
     "react": {
@@ -373,16 +374,12 @@
         "newlinesBetween": "always",
         "groups": [
           "module",
-          "/constants/",
-          "/types/",
-          "/helpers/",
-          "/(?:controllers|routes)/",
-          "/(?:actions|reducers|store)/",
-          "/db/",
-          "/components/",
-          "/pages/",
-          "/config/",
-          "/^(?:server|client|shared)/",
+          "/^constants/",
+          "/^types/",
+          "/^helpers/",
+          "/^hooks/",
+          "/^components/",
+          "/^pages/",
           ["parent", "sibling", "index"]
         ]
       }

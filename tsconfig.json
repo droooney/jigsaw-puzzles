@@ -6,7 +6,8 @@
     "moduleResolution": "node",
     "baseUrl": ".",
     "paths": {
-      "components/*": ["./app/components/*"]
+      "components/*": ["./app/components/*"],
+      "hooks": ["./app/hooks"]
     },
     "typeRoots": [
       "node_modules/@types",
