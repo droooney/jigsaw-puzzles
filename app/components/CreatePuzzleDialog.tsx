@@ -16,6 +16,12 @@ import DialogContent from '@material-ui/core/DialogContent';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import useTheme from '@material-ui/core/styles/useTheme';
 
+import { Dimensions } from 'types/puzzle';
+
+import { Puzzle } from 'helpers/Puzzle';
+
+import LoadingOverlay from 'components/LoadingOverlay';
+
 interface Props {
   open: boolean;
   onClose(): void;
@@ -26,12 +32,9 @@ interface UploadedImage {
   url: string;
 }
 
-interface Dimensions {
-  width: number;
-  height: number;
-}
-
 const Root = styled.div`
+  position: relative;
+
   .dropzone {
     position: relative;
     display: flex;
@@ -80,6 +83,7 @@ const CreatePuzzleDialog: React.FC<Props> = (props) => {
     onClose,
   } = props;
   const theme = useTheme();
+  const [loading, setLoading] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<UploadedImage | null>(null);
   const [selectedDimensionsIndex, setSelectedDimensionsIndex] = useState(-1);
   const [possibleDimensions, setPossibleDimensions] = useState<Dimensions[]>([]);
@@ -87,36 +91,74 @@ const CreatePuzzleDialog: React.FC<Props> = (props) => {
 
   const allowedToCreate = !!uploadedImage && selectedDimensionsIndex !== -1;
 
-  const createPuzzle = useCallback(() => {
+  const createPuzzle = useCallback(async () => {
+    if (!uploadedImage) {
+      return;
+    }
 
-  }, []);
+    setLoading(true);
+
+    try {
+      const gameId = await Puzzle.generateId();
+      const puzzle = new Puzzle({
+        id: gameId,
+        image: uploadedImage.blob,
+      });
+
+      await puzzle.save();
+
+      batchedUpdates(() => {
+        setLoading(false);
+        onClose();
+      });
+    } catch {
+      setLoading(false);
+    }
+  }, [onClose, uploadedImage]);
 
   const selectFile = useCallback(() => {
     uploadFileInput.current?.click();
   }, []);
 
   const loadImage = useCallback((imageFile: File) => {
+    setLoading(true);
+
     const image = new Image();
     const url = URL.createObjectURL(imageFile);
 
-    image.addEventListener('load', () => {
-      console.log(image.width, image.height);
+    image.addEventListener('load', async () => {
+      try {
+        const { dimensions } = await Puzzle.getBestDimensions(image.width, image.height);
+        const possibleDimensions: Dimensions[] = [];
+        let selectedIndex = -1;
 
-      batchedUpdates(() => {
-        setUploadedImage({
-          blob: imageFile,
-          url,
+        for (let k = 1; ; k++) {
+          const newDimensions: Dimensions = {
+            width: k * dimensions.width,
+            height: k * dimensions.height,
+          };
+
+          if (newDimensions.width * newDimensions.height <= 10000) {
+            selectedIndex = 0;
+
+            possibleDimensions.push(newDimensions);
+          } else {
+            break;
+          }
+        }
+
+        batchedUpdates(() => {
+          setLoading(false);
+          setUploadedImage({
+            blob: imageFile,
+            url,
+          });
+          setSelectedDimensionsIndex(selectedIndex);
+          setPossibleDimensions(possibleDimensions);
         });
-        setSelectedDimensionsIndex(0);
-        setPossibleDimensions([
-          { width: 4, height: 4 },
-          { width: 10, height: 10 },
-          { width: 15, height: 15 },
-          { width: 20, height: 20 },
-          { width: 30, height: 30 },
-          { width: 50, height: 50 },
-        ]);
-      });
+      } catch {
+        setLoading(false);
+      }
     });
 
     image.src = url;
@@ -259,6 +301,8 @@ const CreatePuzzleDialog: React.FC<Props> = (props) => {
               </Select>
             </FormControl>
           )}
+
+          {loading && <LoadingOverlay />}
         </Root>
       </DialogContent>
 

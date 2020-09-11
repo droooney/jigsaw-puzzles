@@ -8,7 +8,7 @@ interface HookReturnValue {
   setFalse(): void;
 }
 
-export function useBoolean(init: boolean): HookReturnValue {
+export default function useBoolean(init: boolean): HookReturnValue {
   const [value, setValue] = useState(init);
 
   return {

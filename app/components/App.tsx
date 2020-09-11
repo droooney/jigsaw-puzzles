@@ -3,7 +3,7 @@ import { createGlobalStyle, ThemeProvider } from 'styled-components';
 import MuiThemeProvider from '@material-ui/styles/ThemeProvider';
 import Button from '@material-ui/core/Button';
 
-import { useBoolean } from 'hooks';
+import useBoolean from 'hooks/useBoolean';
 
 import CreatePuzzleDialog from 'components/CreatePuzzleDialog';
 
