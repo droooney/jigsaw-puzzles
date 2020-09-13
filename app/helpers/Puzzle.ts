@@ -2,31 +2,37 @@ import { Model } from 'idb-model';
 import times from 'lodash/times';
 import Parallel from 'paralleljs';
 
-import { Dimensions, Workspace } from 'types/puzzle';
+import { JUT_OFFSET, PIECE_SIZE } from 'constants/puzzle';
+
+import { DBPiece, Dimensions, Piece, Side, Workspace } from 'types/puzzle';
 
 import { db } from 'helpers/db';
+import { drawPieceSide } from 'helpers/paths';
 
 export interface PuzzleAttributes {
   id: string;
+  dimensions: Dimensions;
   image: Blob;
-  workspaces: Workspace[];
+  workspacesData: Workspace<DBPiece>[];
 }
 
-export interface Puzzle extends PuzzleAttributes {}
+// eslint-disable-next-line semi
+export default interface Puzzle extends PuzzleAttributes {}
 
 // eslint-disable-next-line no-redeclare
-export class Puzzle extends Model<PuzzleAttributes, 'id', 'workspaces'> {
+export default class Puzzle extends Model<PuzzleAttributes, 'id', 'workspacesData'> {
   static modelName = 'puzzles';
   static primaryKey: 'id' = 'id';
   static defaultValues = {
-    get workspaces(): Workspace[] {
+    get workspacesData(): Workspace<DBPiece>[] {
       return [];
     },
   };
   static fields = [
     'id',
     'image',
-    'workspaces',
+    'dimensions',
+    'workspacesData',
   ];
 
   static async generateId(): Promise<string> {
@@ -95,9 +101,140 @@ export class Puzzle extends Model<PuzzleAttributes, 'id', 'workspaces'> {
   }
 
   imageUrl: string | null = null;
+  imageDimensions: Dimensions = { width: 0, height: 0 };
+  workspaces: Workspace<Piece>[] = [];
 
-  createImageUrl() {
+  beforeSave() {
+    if (!this.workspaces.length) {
+      return;
+    }
+
+    this.workspacesData = this.workspaces.map((workspace) => ({
+      id: workspace.id,
+      name: workspace.name,
+      groups: workspace.groups.map((group) => ({
+        id: group.id,
+        zIndex: group.zIndex,
+        pieces: group.pieces.map((piece) => ({
+          i: piece.id,
+          o: piece.sidesInfo.map(({ isOuter }) => isOuter),
+          x: piece.x,
+          y: piece.y,
+          t: piece.topSide,
+        })),
+      })),
+    }));
+  }
+
+  calculateWorkspaces() {
+    this.workspaces = this.workspacesData.map((workspace) => ({
+      id: workspace.id,
+      name: workspace.name,
+      groups: workspace.groups.map((group) => ({
+        id: group.id,
+        zIndex: group.zIndex,
+        pieces: group.pieces.map((piece) => {
+          const row = Math.floor(piece.i / this.dimensions.width);
+          const col = piece.i % this.dimensions.width;
+
+          return {
+            id: piece.i,
+            sidesInfo: piece.o.map((isOuter, side) => ({
+              path: drawPieceSide(side as Side, {
+                isOuter,
+                isEdge: this.isEdge(row, col, side as Side),
+                xOffset: JUT_OFFSET,
+              }),
+              isOuter,
+            })),
+            x: piece.x,
+            y: piece.y,
+            row,
+            col,
+            topSide: piece.t,
+          };
+        }),
+      })),
+    }));
+  }
+
+  isEdge(row: number, col: number, side: Side): boolean {
+    if (side === Side.TOP) {
+      return row === 0;
+    }
+
+    if (side === Side.RIGHT) {
+      return col === this.dimensions.width - 1;
+    }
+
+    if (side === Side.BOTTOM) {
+      return row === this.dimensions.height - 1;
+    }
+
+    return col === 0;
+  }
+
+  generatePieces() {
+    const pieces: DBPiece[] = [];
+    const piecesTable: DBPiece[][] = [];
+
+    for (let row = 0; row < this.dimensions.height; row++) {
+      piecesTable.push([]);
+
+      for (let col = 0; col < this.dimensions.width; col++) {
+        const piece: DBPiece = {
+          i: row * this.dimensions.width + col,
+          o: times(4, (side) => (
+            (
+              (side === Side.TOP && row !== 0)
+              || (side === Side.LEFT && col !== 0)
+            )
+              ? side === Side.TOP
+                ? !piecesTable[row - 1][col].o[Side.BOTTOM]
+                : !piecesTable[row][col - 1].o[Side.RIGHT]
+              : this.isEdge(row, col, side)
+                ? false
+                : Math.random() >= 0.5
+          )),
+          x: col * PIECE_SIZE * 1.0,
+          y: row * PIECE_SIZE * 1.0,
+          t: Math.floor(Math.random() * 4) as Side,
+        };
+
+        pieces.push(piece);
+        piecesTable[row].push(piece);
+      }
+    }
+
+    this.workspacesData = [{
+      id: 0,
+      name: 'Main',
+      groups: [{
+        id: 0,
+        zIndex: 0,
+        pieces,
+      }],
+    }];
+  }
+
+  async loadImage() {
     this.imageUrl = URL.createObjectURL(this.image);
+
+    await new Promise((resolve) => {
+      const image = new Image();
+      const url = URL.createObjectURL(this.image);
+
+      image.addEventListener('load', () => {
+        this.imageDimensions = {
+          width: image.width,
+          height: image.height,
+        };
+
+        resolve();
+      });
+
+      image.src = url;
+    });
   }
 
   revokeImageUrl() {

@@ -1,11 +1,10 @@
 import React, { useEffect } from 'react';
+import { BrowserRouter, Redirect, Route, Switch } from 'react-router-dom';
 import { createGlobalStyle, ThemeProvider } from 'styled-components';
 import MuiThemeProvider from '@material-ui/styles/ThemeProvider';
-import Button from '@material-ui/core/Button';
 
-import useBoolean from 'hooks/useBoolean';
-
-import CreatePuzzleDialog from 'components/CreatePuzzleDialog';
+import Home from 'components/Home';
+import Puzzle from 'components/Puzzle';
 
 import theme from '../theme';
 
@@ -20,20 +19,11 @@ const GlobalStyle = createGlobalStyle`
   }
 
   #root {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    height: 100%;
   }
 `;
 
 const App: React.FC = () => {
-  const {
-    value: createPuzzleDialogOpen,
-    setTrue: openCreatePuzzleDialog,
-    setFalse: closeCreatePuzzleDialog,
-  } = useBoolean(false);
-
   useEffect(() => {
     document.addEventListener('dragover', (e) => e.preventDefault());
     document.addEventListener('drop', (e) => e.preventDefault());
@@ -41,21 +31,22 @@ const App: React.FC = () => {
 
   return (
     <ThemeProvider theme={theme}>
+      <GlobalStyle />
+
       <MuiThemeProvider theme={theme}>
-        <GlobalStyle />
+        <BrowserRouter>
+          <Switch>
+            <Route exact path="/">
+              <Home />
+            </Route>
 
-        <CreatePuzzleDialog
-          open={createPuzzleDialogOpen}
-          onClose={closeCreatePuzzleDialog}
-        />
+            <Route exact path="/puzzle/:puzzleId">
+              <Puzzle />
+            </Route>
 
-        <Button
-          variant="contained"
-          color="secondary"
-          onClick={openCreatePuzzleDialog}
-        >
-          Create Puzzle
-        </Button>
+            <Redirect to="/" />
+          </Switch>
+        </BrowserRouter>
       </MuiThemeProvider>
     </ThemeProvider>
   );

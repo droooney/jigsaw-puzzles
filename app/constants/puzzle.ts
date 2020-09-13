@@ -1,0 +1,9 @@
+export const PIECE_SIZE = 100;
+export const JUT_RADIUS = PIECE_SIZE * 0.15;
+export const JUT_CUT_SIZE = PIECE_SIZE * 0.4;
+export const JUT_DISTANCE = JUT_RADIUS * 0.2;
+export const JUT_ANGLE = 105 * Math.PI / 180;
+export const JUT_SIZE = JUT_RADIUS * (1 + Math.cos(JUT_ANGLE / 2)) + JUT_DISTANCE;
+export const JUT_OFFSET = 0.3;
+export const CUBIC_TANGENT_RATIO_1 = 0.2;
+export const CUBIC_TANGENT_RATIO_2 = 0.2;

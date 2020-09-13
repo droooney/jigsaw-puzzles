@@ -15,10 +15,11 @@ import DialogActions from '@material-ui/core/DialogActions';
 import DialogContent from '@material-ui/core/DialogContent';
 import DialogTitle from '@material-ui/core/DialogTitle';
 import useTheme from '@material-ui/core/styles/useTheme';
+import { useHistory } from 'react-router';
 
 import { Dimensions } from 'types/puzzle';
 
-import { Puzzle } from 'helpers/Puzzle';
+import Puzzle from 'helpers/Puzzle';
 
 import LoadingOverlay from 'components/LoadingOverlay';
 
@@ -83,6 +84,7 @@ const CreatePuzzleDialog: React.FC<Props> = (props) => {
     onClose,
   } = props;
   const theme = useTheme();
+  const history = useHistory();
   const [loading, setLoading] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<UploadedImage | null>(null);
   const [selectedDimensionsIndex, setSelectedDimensionsIndex] = useState(-1);
@@ -99,22 +101,23 @@ const CreatePuzzleDialog: React.FC<Props> = (props) => {
     setLoading(true);
 
     try {
-      const gameId = await Puzzle.generateId();
       const puzzle = new Puzzle({
-        id: gameId,
+        id: await Puzzle.generateId(),
         image: uploadedImage.blob,
+        dimensions: possibleDimensions[selectedDimensionsIndex],
       });
+
+      puzzle.generatePieces();
 
       await puzzle.save();
 
       batchedUpdates(() => {
-        setLoading(false);
-        onClose();
+        history.push(`/puzzle/${puzzle.id}`);
       });
     } catch {
       setLoading(false);
     }
-  }, [onClose, uploadedImage]);
+  }, [history, possibleDimensions, selectedDimensionsIndex, uploadedImage]);
 
   const selectFile = useCallback(() => {
     uploadFileInput.current?.click();
