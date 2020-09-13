@@ -4,7 +4,8 @@ import Parallel from 'paralleljs';
 
 import { JUT_OFFSET, PIECE_SIZE } from 'constants/puzzle';
 
-import { DBPiece, Dimensions, Piece, Side, Workspace } from 'types/puzzle';
+import { DBPiece, DBWorkspace, Side, Workspace } from 'types/puzzle';
+import { Dimensions } from 'types/common';
 
 import { db } from 'helpers/db';
 import { drawPieceSide } from 'helpers/paths';
@@ -13,18 +14,18 @@ export interface PuzzleAttributes {
   id: string;
   dimensions: Dimensions;
   image: Blob;
-  workspacesData: Workspace<DBPiece>[];
+  dbWorkspaces: DBWorkspace[];
 }
 
 // eslint-disable-next-line semi
 export default interface Puzzle extends PuzzleAttributes {}
 
 // eslint-disable-next-line no-redeclare
-export default class Puzzle extends Model<PuzzleAttributes, 'id', 'workspacesData'> {
+export default class Puzzle extends Model<PuzzleAttributes, 'id', 'dbWorkspaces'> {
   static modelName = 'puzzles';
   static primaryKey: 'id' = 'id';
   static defaultValues = {
-    get workspacesData(): Workspace<DBPiece>[] {
+    get dbWorkspaces(): DBWorkspace[] {
       return [];
     },
   };
@@ -32,7 +33,7 @@ export default class Puzzle extends Model<PuzzleAttributes, 'id', 'workspacesDat
     'id',
     'image',
     'dimensions',
-    'workspacesData',
+    'dbWorkspaces',
   ];
 
   static async generateId(): Promise<string> {
@@ -102,20 +103,18 @@ export default class Puzzle extends Model<PuzzleAttributes, 'id', 'workspacesDat
 
   imageUrl: string | null = null;
   imageDimensions: Dimensions = { width: 0, height: 0 };
-  workspaces: Workspace<Piece>[] = [];
+  workspaces: Workspace[] = [];
 
   beforeSave() {
     if (!this.workspaces.length) {
       return;
     }
 
-    this.workspacesData = this.workspaces.map((workspace) => ({
-      id: workspace.id,
+    this.dbWorkspaces = this.workspaces.map((workspace) => ({
       name: workspace.name,
-      groups: workspace.groups.map((group) => ({
-        id: group.id,
-        zIndex: group.zIndex,
-        pieces: group.pieces.map((piece) => ({
+      groups: workspace.groups.map((group, groupIndex) => ({
+        z: groupIndex,
+        p: group.pieces.map((piece) => ({
           i: piece.id,
           o: piece.sidesInfo.map(({ isOuter }) => isOuter),
           x: piece.x,
@@ -127,18 +126,19 @@ export default class Puzzle extends Model<PuzzleAttributes, 'id', 'workspacesDat
   }
 
   calculateWorkspaces() {
-    this.workspaces = this.workspacesData.map((workspace) => ({
-      id: workspace.id,
+    this.workspaces = this.dbWorkspaces.map((workspace, workspaceId) => ({
+      id: workspaceId,
       name: workspace.name,
-      groups: workspace.groups.map((group) => ({
-        id: group.id,
-        zIndex: group.zIndex,
-        pieces: group.pieces.map((piece) => {
+      groups: workspace.groups.map((group, groupId) => ({
+        id: groupId,
+        zIndex: group.z,
+        pieces: group.p.map((piece) => {
           const row = Math.floor(piece.i / this.dimensions.width);
           const col = piece.i % this.dimensions.width;
 
           return {
             id: piece.i,
+            groupId,
             sidesInfo: piece.o.map((isOuter, side) => ({
               path: drawPieceSide(side as Side, {
                 isOuter,
@@ -196,8 +196,8 @@ export default class Puzzle extends Model<PuzzleAttributes, 'id', 'workspacesDat
                 ? false
                 : Math.random() >= 0.5
           )),
-          x: col * PIECE_SIZE * 1.0,
-          y: row * PIECE_SIZE * 1.0,
+          x: col * PIECE_SIZE * 1.5,
+          y: row * PIECE_SIZE * 1.5,
           t: Math.floor(Math.random() * 4) as Side,
         };
 
@@ -206,14 +206,12 @@ export default class Puzzle extends Model<PuzzleAttributes, 'id', 'workspacesDat
       }
     }
 
-    this.workspacesData = [{
-      id: 0,
+    this.dbWorkspaces = [{
       name: 'Main',
-      groups: [{
-        id: 0,
-        zIndex: 0,
-        pieces,
-      }],
+      groups: pieces.map((piece, index) => ({
+        z: index,
+        p: [piece],
+      })),
     }];
   }
 

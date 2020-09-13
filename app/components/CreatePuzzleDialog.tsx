@@ -17,7 +17,7 @@ import DialogTitle from '@material-ui/core/DialogTitle';
 import useTheme from '@material-ui/core/styles/useTheme';
 import { useHistory } from 'react-router';
 
-import { Dimensions } from 'types/puzzle';
+import { Dimensions } from 'types/common';
 
 import Puzzle from 'helpers/Puzzle';
 
@@ -85,11 +85,12 @@ const CreatePuzzleDialog: React.FC<Props> = (props) => {
   } = props;
   const theme = useTheme();
   const history = useHistory();
+  const uploadFileInput = useRef<HTMLInputElement | null>(null);
+
   const [loading, setLoading] = useState(false);
   const [uploadedImage, setUploadedImage] = useState<UploadedImage | null>(null);
   const [selectedDimensionsIndex, setSelectedDimensionsIndex] = useState(-1);
   const [possibleDimensions, setPossibleDimensions] = useState<Dimensions[]>([]);
-  const uploadFileInput = useRef<HTMLInputElement | null>(null);
 
   const allowedToCreate = !!uploadedImage && selectedDimensionsIndex !== -1;
 

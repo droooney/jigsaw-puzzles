@@ -1,13 +1,22 @@
-export interface Workspace<T> {
-  id: number;
+export interface DBWorkspace {
   name: string;
-  groups: PieceGroup<T>[];
+  groups: DBPieceGroup[];
 }
 
-export interface PieceGroup<T> {
+export interface Workspace {
   id: number;
-  zIndex: number;
-  pieces: T[];
+  name: string;
+  groups: PieceGroup[];
+}
+
+export interface DBPieceGroup {
+  z: number;
+  p: DBPiece[];
+}
+
+export interface PieceGroup {
+  id: number;
+  pieces: Piece[];
 }
 
 export enum Side {
@@ -37,15 +46,11 @@ export interface DBPiece {
 
 export interface Piece {
   id: number;
+  groupId: number;
   sidesInfo: SideInfo[];
   x: number;
   y: number;
   row: number;
   col: number;
   topSide: Side;
-}
-
-export interface Dimensions {
-  width: number;
-  height: number;
 }
