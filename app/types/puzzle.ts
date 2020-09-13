@@ -1,3 +1,5 @@
+import { Dimensions } from 'types/common';
+
 export interface DBWorkspace {
   name: string;
   groups: DBPieceGroup[];
@@ -10,12 +12,20 @@ export interface Workspace {
 }
 
 export interface DBPieceGroup {
-  z: number;
+  x: number;
+  y: number;
+  t: Side;
   p: DBPiece[];
 }
 
 export interface PieceGroup {
   id: number;
+  x: number;
+  y: number;
+  topSide: Side;
+  dimensions: Dimensions;
+  minRow: number;
+  minCol: number;
   pieces: Piece[];
 }
 
@@ -32,25 +42,14 @@ export interface SideInfo {
 }
 
 export interface DBPiece {
-  // id
   i: number;
-
-  // isOuter
-  o: boolean[];
-  x: number;
-  y: number;
-
-  // top side
-  t: Side;
+  o: number[];
 }
 
 export interface Piece {
   id: number;
   groupId: number;
   sidesInfo: SideInfo[];
-  x: number;
-  y: number;
   row: number;
   col: number;
-  topSide: Side;
 }
